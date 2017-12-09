@@ -1,29 +1,20 @@
 import torch
 import torch.nn.functional as F
 from torchvision import datasets, transforms
-from mnist_modules import AutoEncoder
+from mnist_modules import NPAutoEncoder
 from torch.autograd import Variable
 import numpy as np
 from torchvision.utils import save_image
 
 
-kwargs = {'num_workers': 1, 'pin_memory': True}
+kwargs = {'num_workers': 1, 'pin_memory': True, 'drop_last': True}
 train_loader = torch.utils.data.DataLoader(
-    datasets.FashionMNIST(
-        './data/fashion_mnist/', train=True, download=True,
+    datasets.MNIST(
+        './data/mnist/', train=True, download=True,
         transform=transforms.ToTensor()
-        ), batch_size=128, shuffle=False, **kwargs
-    )
-
-test_loader = torch.utils.data.DataLoader(
-    datasets.FashionMNIST(
-        './data/fashion_mnist/', train=False,
-        transform=transforms.ToTensor()
-    ), batch_size=32, shuffle=False, **kwargs
+    ), batch_size=128, shuffle=False, **kwargs
 )
-test_data = list(test_loader)
-
-model = AutoEncoder().cuda()
+model = NPAutoEncoder().cuda()
 opt = torch.optim.Adam(model.parameters(), lr=2e-4)
 
 
@@ -38,12 +29,14 @@ def train(epoch):
     train_loss = []
     for batch_idx, (data, _) in enumerate(train_loader):
         x = Variable(data, requires_grad=False).cuda()
-        x_tilde, z_e_x, z_q_x = model(x)
+        idx = Variable(torch.arange(batch_idx * 128,
+                                    (batch_idx + 1) * 128)).long().cuda()
+        x_tilde, z_e_x, z_q_x = model(idx)
 
         z_q_x.retain_grad()
 
-        loss_recons = F.l1_loss(x_tilde, x)
-        # loss_recons = F.binary_cross_entropy(x_tilde, x)
+        # loss_recons = F.l1_loss(x_tilde, x)
+        loss_recons = F.binary_cross_entropy(x_tilde, x)
         loss_e1 = torch.pow(z_e_x.detach() - z_q_x, 2).sum(1).mean()
         loss_e2 = torch.pow(z_e_x - z_q_x.detach(), 2).sum(1).mean()
 
@@ -66,14 +59,16 @@ def train(epoch):
 
 
 def test():
-    x = Variable(test_data[0][0]).cuda()
-    x_tilde, _, _ = model(x)
+    idx = Variable(torch.arange(0, 32)).long().cuda()
+    x = Variable(enumerate(train_loader).next()[1][0]).cuda()
+    x = x[:32]
+    x_tilde, _, _ = model(idx)
 
     x_cat = torch.cat([x, x_tilde], 0)
     images = x_cat.cpu().data
-    save_image(images, './test.png', nrow=8)
+    save_image(images, './test_np.png', nrow=8)
 
 
-for i in xrange(100):
+for i in xrange(50):
     train(i)
     test()
