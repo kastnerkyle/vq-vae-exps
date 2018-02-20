@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 from torchvision import datasets, transforms
-from mnist_modules import AutoEncoder, to_scalar
+from modules import AutoEncoder, to_scalar
 from torch.autograd import Variable
 import numpy as np
 from torchvision.utils import save_image
@@ -58,7 +58,7 @@ def train(epoch):
             epoch, batch_idx * len(data), len(train_loader.dataset),
             100. * batch_idx / len(train_loader),
             np.asarray(train_loss).mean(0),
-            time.time() - start_time    
+            time.time() - start_time
         )
 
 
@@ -68,7 +68,7 @@ def test():
 
     x_cat = torch.cat([x, x_tilde], 0)
     images = x_cat.cpu().data
-    save_image(images, './test.png', nrow=8)
+    save_image(images, './sample_fashion_mnist.png', nrow=8)
 
 
 for i in xrange(100):

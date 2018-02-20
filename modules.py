@@ -12,27 +12,6 @@ def to_scalar(arr):
         return arr.cpu().data.tolist()[0]
 
 
-def to_cuda_variable(array, requires_grad=True, volatile=False):
-    if 'numpy' in str(type(array)):
-        array = torch.from_numpy(array)
-    return Variable(array,
-                    requires_grad=requires_grad,
-                    volatile=volatile).cuda()
-
-
-class ResidualBlock(nn.Module):
-    def __init__(self, dim):
-        super(ResidualBlock, self).__init__()
-        self.block = nn.Sequential(
-            nn.Conv2d(dim, dim, 3, 1, 1),
-            nn.ReLU(True),
-            nn.Conv2d(dim, dim, 1, 1)
-        )
-
-    def forward(self, x):
-        return x + self.block(x)
-
-
 class AutoEncoder(nn.Module):
     def __init__(self):
         super(AutoEncoder, self).__init__()
@@ -45,7 +24,6 @@ class AutoEncoder(nn.Module):
             nn.ReLU(True),
             nn.Conv2d(32, 64, 1, 1, 0),
             nn.BatchNorm2d(64),
-            # nn.ReLU(True)
         )
 
         self.embedding = nn.Embedding(512, 64)
@@ -74,7 +52,6 @@ class AutoEncoder(nn.Module):
         ).sum(-2)
         latents = dists.min(-1)[1]
 
-        # z_q_x = self.embedding(latents.view(latents.size(0), -1))
         z_q_x = self.embedding(latents.view(latents.size(0), -1))
         z_q_x = z_q_x.view(B, H, W, C).permute(0, 3, 1, 2)
         x_tilde = self.decoder(z_q_x)
